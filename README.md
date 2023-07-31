@@ -1,4 +1,4 @@
-# elysia-connect
+# elysia-connect ![Test](https://github.com/timnghg/elysia-connect/actions/workflows/main.yml/badge.svg)
 
 Use Connect's middlewares with Elysia.
 
