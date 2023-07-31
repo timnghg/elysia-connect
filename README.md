@@ -12,7 +12,7 @@ bun add elysia-connect
 
 ```js
 const {Elysia} = require('elysia')
-const {elysiaConnect} = require('elysia-connect/src')
+const {elysiaConnect} = require('elysia-connect')
 
 const middleware1 = (req, res, next) => {
     res.write("Hello");
