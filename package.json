@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "module": "src/index.ts",
   "type": "module",
+  "repository": "github:timnghg/elysia-connect",
   "scripts": {
     "test": "bun test",
     "build": "rimraf dist && npm run build:esm && npm run build:cjs",
