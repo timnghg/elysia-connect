@@ -30,10 +30,10 @@ const middleware3 = (req, res, next) => {
 const app = new Elysia()
     // 1. use as plugin
     .use(elysiaConnect(middleware1, {
-        mathPath: (path) => path === '/hello' // optional path matcher
+        matchPath: (path) => path === '/hello' // optional path matcher
     }))
     .use(elysiaConnect(middleware2, {
-        mathPath: (path) => path === '/hello' // optional path matcher
+        matchPath: (path) => path === '/hello' // optional path matcher
     }))
 
     // 2. use in hook beforeHandle
