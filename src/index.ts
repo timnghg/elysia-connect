@@ -8,43 +8,77 @@ export type ConnectMiddleware = (
 ) => void;
 
 export type Options<C extends Context> = {
-    transformUrl?(url: string): string
-    match?(context: C): Promise<boolean>|boolean
-    matchUrl?(url: string): Promise<boolean>|boolean
-    matchPath?(url: string): Promise<boolean>|boolean
-}
+    name?: string;
+    transformUrl?(url: string): string;
+    match?(context: C): Promise<boolean> | boolean;
+    matchUrl?(url: string): Promise<boolean> | boolean;
+    matchPath?(url: string): Promise<boolean> | boolean;
+};
 
-export const elysiaConnectDecorate = () => (app: Elysia) =>
-    app.decorate("elysiaConnect", transform)
+export const elysiaConnectDecorate =
+    () =>
+    <App extends Elysia<"">>(app: App) =>
+        app.decorate("elysiaConnect", transform);
 
-export const elysiaConnect = <App extends Elysia<any>, C extends Context>(middleware: ConnectMiddleware, options?: Options<C>) => (app: App) => app
-    .use(elysiaConnectDecorate())
-    .derive(context => ({
-        pendingResponse: ElysiaServerResponse.fromRequest(
-            ElysiaIncomingMessage.fromRequest(context.request)
-        )
-    }))
-    .use(app => app.onBeforeHandle(async (context) => {
-        if (options?.match && !await options.match(context)) return;
-        if (options?.matchUrl && !await options.matchUrl(context.request.url)) return;
-        if (options?.matchPath && !await options.matchPath((new URL(context.request.url).pathname))) return;
-        const resp = await context.elysiaConnect(middleware, context, options);
-        if (!resp) return;
-        return resp;
-    }));
-
-async function transform<C extends Context & { pendingResponse?: ElysiaServerResponse }>(
+export function elysiaConnect<C extends Context>(
     middleware: ConnectMiddleware,
-    context: C,
     options?: Options<C>
 ) {
-    context.pendingResponse = context.pendingResponse || ElysiaServerResponse.fromRequest(
-        ElysiaIncomingMessage.fromRequest(context.request, options),
-    )
+    return new Elysia({
+        name: `elysia-connect${options?.name ? `-${options.name}` : ""}`,
+        seed: {
+            ...options,
+            middleware,
+        },
+    })
+        .use(elysiaConnectDecorate())
+        .derive((context) => ({
+            pendingResponse: ElysiaServerResponse.fromRequest(
+                ElysiaIncomingMessage.fromRequest(context.request)
+            ),
+        }))
+        .use((app) =>
+            app.onBeforeHandle(async (context) => {
+                if (
+                    options?.match &&
+                    !(await options.match(context as unknown as C))
+                )
+                    return;
+                if (
+                    options?.matchUrl &&
+                    !(await options.matchUrl(context.request.url))
+                )
+                    return;
+                if (
+                    options?.matchPath &&
+                    !(await options.matchPath(
+                        new URL(context.request.url).pathname
+                    ))
+                )
+                    return;
+                const resp = await context.elysiaConnect(
+                    middleware,
+                    context,
+                    options as unknown as Options<Context>
+                );
+                if (!resp) return;
+                return resp;
+            })
+        );
+}
+
+async function transform<
+    C extends Context & { pendingResponse?: ElysiaServerResponse }
+>(middleware: ConnectMiddleware, context: C, options?: Options<C>) {
+    context.pendingResponse =
+        context.pendingResponse ||
+        ElysiaServerResponse.fromRequest(
+            ElysiaIncomingMessage.fromRequest(context.request, options)
+        );
     const nodeRequest = context.pendingResponse.req;
 
     return new Promise((resolve) => {
-        const nodeResponse = context.pendingResponse
+        const nodeResponse = context.pendingResponse;
 
         if (!nodeResponse) return resolve(undefined);
 
@@ -55,7 +89,7 @@ async function transform<C extends Context & { pendingResponse?: ElysiaServerRes
                 headers: nodeResponse.getHeaders() as HeadersInit,
             });
             resolve(resp);
-        }
+        };
 
         return middleware(nodeRequest, nodeResponse, () => {
             resolve(undefined);
@@ -67,7 +101,10 @@ class ElysiaIncomingMessage extends IncomingMessage {
     originalUrl?: string;
     originalRequest?: Request;
 
-    static fromRequest<C extends Context>(request: Request, options?: Options<C>) {
+    static fromRequest<C extends Context>(
+        request: Request,
+        options?: Options<C>
+    ) {
         let originalUrl = request.url;
         let url = request.url;
         if (options?.transformUrl) {
@@ -92,16 +129,22 @@ class ElysiaServerResponse extends ServerResponse {
     declare req: ElysiaIncomingMessage;
     reply?: (resp: Response) => void;
 
-    constructor(options: { req: ElysiaIncomingMessage, reply?: (resp: Response) => void }) {
+    constructor(options: {
+        req: ElysiaIncomingMessage;
+        reply?: (resp: Response) => void;
+    }) {
         super(options as any);
     }
 
-    static fromRequest(request: ElysiaIncomingMessage, reply?: (resp: Response) => void) {
+    static fromRequest(
+        request: ElysiaIncomingMessage,
+        reply?: (resp: Response) => void
+    ) {
         return new ElysiaServerResponse({
             req: request,
             reply(resp: Response) {
                 return this.reply ? this.reply(resp) : reply?.(resp);
-            }
+            },
         });
     }
 }

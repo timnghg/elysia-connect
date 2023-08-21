@@ -30,9 +30,11 @@ const middleware3 = (req, res, next) => {
 const app = new Elysia()
     // 1. use as plugin
     .use(elysiaConnect(middleware1, {
+        name: "middleware1", // use name to bypass Elysia's plugin deduplication
         matchPath: (path) => path === '/hello' // optional path matcher
     }))
     .use(elysiaConnect(middleware2, {
+        name: "middleware2", // use name to bypass Elysia's plugin deduplication
         matchPath: (path) => path === '/hello' // optional path matcher
     }))
 
