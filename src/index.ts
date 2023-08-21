@@ -1,4 +1,4 @@
-import { Context, Elysia } from "elysia";
+import { Context, Elysia, ElysiaConfig } from "elysia";
 import { IncomingMessage, ServerResponse } from "node:http";
 
 export type ConnectMiddleware = (
@@ -15,23 +15,29 @@ export type Options<C extends Context> = {
     matchPath?(url: string): Promise<boolean> | boolean;
 };
 
-export const elysiaConnectDecorate =
-    () =>
-    <App extends Elysia<"">>(app: App) =>
-        app.decorate("elysiaConnect", transform);
+export function elysiaConnectDecorate(options?: ElysiaConfig) {
+    return new Elysia({
+        name: "elysia-connect-decorate",
+        ...options,
+    }).decorate("elysiaConnect", transform);
+}
 
 export function elysiaConnect<C extends Context>(
     middleware: ConnectMiddleware,
     options?: Options<C>
 ) {
+    const name = `elysia-connect${options?.name ? `-${options.name}` : ""}`;
+    const seed = options || { name };
     return new Elysia({
-        name: `elysia-connect${options?.name ? `-${options.name}` : ""}`,
-        seed: {
-            ...options,
-            middleware,
-        },
+        name,
+        seed,
     })
-        .use(elysiaConnectDecorate())
+        .use(
+            elysiaConnectDecorate({
+                name: `${name}-decorate`,
+                seed,
+            })
+        )
         .derive((context) => ({
             pendingResponse: ElysiaServerResponse.fromRequest(
                 ElysiaIncomingMessage.fromRequest(context.request)
